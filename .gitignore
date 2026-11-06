@@ -1,0 +1,22 @@
+# Dependency directories
+node_modules/
+
+# SQLite databases & journals
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment & OS files
+.env
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/

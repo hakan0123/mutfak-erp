@@ -1,0 +1,26 @@
+{
+  "name": "mutfak-erp",
+  "version": "1.0.0",
+  "description": "Profesyonel Restoran Stok, Reçete ve Backflushing Maliyet Yönetim Sistemi",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "init-db": "node db.js",
+    "test": "node test_schema.js"
+  },
+  "keywords": [
+    "restaurant",
+    "erp",
+    "kitchen",
+    "inventory",
+    "food-cost",
+    "backflushing",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
