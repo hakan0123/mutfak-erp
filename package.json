@@ -7,7 +7,8 @@
     "start": "node server.js",
     "init-db": "node db.js",
     "test": "node test_schema.js",
-    "test:triggers": "node tests/triggers.test.js"
+    "test:triggers": "node tests/triggers.test.js",
+    "test:api": "node tests/api.test.js"
   },
   "keywords": [
     "restaurant",
