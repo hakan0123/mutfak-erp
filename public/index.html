@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutfak ERP | Profesyonel Restoran Stok, Reçete ve Maliyet Yönetimi</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            900: '#7c2d12'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                <i class="fa-solid fa-utensils text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                    Mutfak ERP <span class="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-semibold border border-orange-500/30">v2.4 Enterprise</span>
+                </h1>
+                <p class="text-xs text-slate-400">Stok Akışı, Reçete Maliyeti & Backflushing Sistemi</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div id="live-food-cost-pill" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700 text-xs font-medium">
+                <span class="text-slate-400">Hedef Food Cost:</span>
+                <span class="text-amber-400 font-bold">%28 - %35</span>
+                <span class="mx-1 text-slate-600">|</span>
+                <span class="text-slate-400">Mevcut:</span>
+                <span id="header-food-cost" class="font-bold text-emerald-400">%0.0</span>
+            </div>
+
+            <button onclick="refreshCurrentTab()" title="Yenile" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/60 transition">
+                <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-700">
+                <div class="w-8 h-8 rounded-full bg-orange-600/30 border border-orange-500/40 flex items-center justify-center text-orange-300 font-bold text-xs">
+                    ŞEF
+                </div>
+                <div class="hidden sm:block text-left">
+                    <div class="text-xs font-semibold text-slate-200">Baş Şef & Yönetici</div>
+                    <div class="text-[10px] text-emerald-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Çevrimiçi
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container with Sidebar + Content -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-800/40 border-r border-slate-700/60 flex flex-col justify-between p-4 space-y-6 shrink-0 hidden lg:flex">
+            <div class="space-y-1">
+                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Ana Menü</div>
+                <nav class="space-y-1.5" id="sidebar-nav">
+                    <button onclick="switchTab('dashboard')" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="dashboard">
+                        <i class="fa-solid fa-chart-pie w-5 text-center text-orange-400"></i>
+                        <span>Genel Bakış</span>
+                    </button>
+                    <button onclick="switchTab('pos')" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="pos">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-cash-register w-5 text-center text-amber-400"></i>
+                            <span>POS / Hızlı Satış</span>
+                        </div>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">CANLI</span>
+                    </button>
+                    <button onclick="switchTab('ingredients')" class="nav-item w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="ingredients">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-boxes-stacked w-5 text-center text-blue-400"></i>
+                            <span>Hammadde & Stok</span>
+                        </div>
+                        <span id="badge-critical-count" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">0</span>
+                    </button>
+                    <button onclick="switchTab('recipes')" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="recipes">
+                        <i class="fa-solid fa-book-open w-5 text-center text-emerald-400"></i>
+                        <span>Menü & Reçeteler</span>
+                    </button>
+                    <button onclick="switchTab('purchases')" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="purchases">
+                        <i class="fa-solid fa-truck-ramp-box w-5 text-center text-cyan-400"></i>
+                        <span>Satın Alma & İrsaliye</span>
+                    </button>
+                    <button onclick="switchTab('waste')" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="waste">
+                        <i class="fa-solid fa-trash-can w-5 text-center text-rose-400"></i>
+                        <span>Zayiat & Fire Takibi</span>
+                    </button>
+                    <button onclick="switchTab('stock-counts')" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/50" data-tab="stock-counts">
+                        <i class="fa-solid fa-clipboard-check w-5 text-center text-purple-400"></i>
+                        <span>Fiziki Sayım & Sapma</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Quick Info Box -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-3.5 space-y-2 text-xs">
+                <div class="flex items-center justify-between text-slate-400 font-medium">
+                    <span>Backflushing Durumu</span>
+                    <i class="fa-solid fa-bolt-lightning text-amber-400"></i>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    Sipariş tamamlandığında reçete oranlarına ve porsiyon fire payına göre stoklar otomatik düşer.
+                </p>
+                <div class="pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px]">
+                    <span class="text-slate-500">Tetikleyiciler (Triggers):</span>
+                    <span class="text-emerald-400 font-bold">Aktif (7/7)</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+
+            <!-- Mobile Navigation Pills -->
+            <div class="flex lg:hidden overflow-x-auto gap-2 pb-2 scrollbar-none">
+                <button onclick="switchTab('dashboard')" class="mobile-nav-btn active px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="dashboard">Genel Bakış</button>
+                <button onclick="switchTab('pos')" class="mobile-nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="pos">POS Satış</button>
+                <button onclick="switchTab('ingredients')" class="mobile-nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="ingredients">Hammaddeler</button>
+                <button onclick="switchTab('recipes')" class="mobile-nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="recipes">Reçeteler</button>
+                <button onclick="switchTab('purchases')" class="mobile-nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="purchases">Satın Alma</button>
+                <button onclick="switchTab('waste')" class="mobile-nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="waste">Zayiat / Fire</button>
+                <button onclick="switchTab('stock-counts')" class="mobile-nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-800 text-slate-300" data-tab="stock-counts">Fiziki Sayım</button>
+            </div>
+
+            <!-- Global Toast Notification Banner -->
+            <div id="toast-container" class="fixed top-20 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+            <!-- =============================================================== -->
+            <!-- TAB 1: DASHBOARD -->
+            <!-- =============================================================== -->
+            <section id="tab-dashboard" class="tab-pane active space-y-6">
+                <!-- Page Title & Quick Actions -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">Mutfak Performans Göstergeleri</h2>
+                        <p class="text-sm text-slate-400">Canlı gıda maliyeti (Food Cost %), ciro, kar marjı ve stok hareketleri</p>
+                    </div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <button onclick="switchTab('pos')" class="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-orange-600/25 transition">
+                            <i class="fa-solid fa-plus-circle"></i> Hızlı POS Satışı
+                        </button>
+                        <button onclick="openPurchaseModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs flex items-center gap-2 transition">
+                            <i class="fa-solid fa-truck-ramp-box text-cyan-400"></i> Fatura Girişi
+                        </button>
+                        <button onclick="openWasteModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold rounded-xl text-xs flex items-center gap-2 transition">
+                            <i class="fa-solid fa-trash-can text-rose-400"></i> Fire Kaydet
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Food Cost % Card -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 relative overflow-hidden backdrop-blur shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Food Cost %</span>
+                            <span id="kpi-food-cost-badge" class="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">İdeal</span>
+                        </div>
+                        <div class="mt-3 flex items-baseline gap-2">
+                            <span id="kpi-food-cost-val" class="text-3xl font-black text-white">%0.0</span>
+                            <span class="text-xs text-slate-400 font-medium">Hedef: %28-%35</span>
+                        </div>
+                        <div class="mt-4 w-full bg-slate-700/50 h-2 rounded-full overflow-hidden">
+                            <div id="kpi-food-cost-bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 25%"></div>
+                        </div>
+                        <div class="mt-2 flex justify-between text-[11px] text-slate-400">
+                            <span>Sektör Alt Sınırı (%28)</span>
+                            <span>Üst Sınır (%35)</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Sales Revenue -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 relative overflow-hidden backdrop-blur shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Toplam Satış Cirosu</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm font-bold">₺</div>
+                        </div>
+                        <div class="mt-3 flex items-baseline gap-2">
+                            <span id="kpi-sales-revenue" class="text-3xl font-black text-white">₺0,00</span>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-400 flex items-center justify-between">
+                            <span>Brüt Kar: <b id="kpi-gross-profit" class="text-emerald-400">₺0,00</b></span>
+                            <span class="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 font-medium" id="kpi-profit-margin">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Kitchen Cost -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 relative overflow-hidden backdrop-blur shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Mutfak Maliyeti (COGS)</span>
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-receipt"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-baseline gap-2">
+                            <span id="kpi-kitchen-cost" class="text-3xl font-black text-white">₺0,00</span>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-400 flex items-center justify-between">
+                            <span>Reçete Düşüşü + Fire</span>
+                            <span class="text-xs text-rose-400 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-arrow-down-wide-short"></i> Backflushing
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Total Inventory Value -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 relative overflow-hidden backdrop-blur shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Depo Stok Değeri</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-warehouse"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-baseline gap-2">
+                            <span id="kpi-inventory-val" class="text-3xl font-black text-white">₺0,00</span>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-400 flex items-center justify-between">
+                            <span>Toplam <span id="kpi-ing-count" class="font-bold text-slate-200">0</span> hammadde</span>
+                            <span id="kpi-critical-alert" class="text-xs text-amber-400 font-semibold cursor-pointer hover:underline" onclick="switchTab('ingredients')">
+                                0 kritik stok
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts & Critical Stock Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Financial & Category Chart -->
+                    <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-bold text-white">Satış & Maliyet Dağılımı</h3>
+                                <p class="text-xs text-slate-400">Kategorilere göre hasılat ve mutfak maliyeti analizi</p>
+                            </div>
+                            <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-700 text-slate-300 font-medium">Kategori Kırılımı</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="categorySalesChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Right: Critical Stock Warning Card (Query C) -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                    <h3 class="text-base font-bold text-white">Kritik Stok Uyarıları</h3>
+                                </div>
+                                <span class="text-[11px] text-slate-400">Mevcut ≤ Min</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-3">Tükenmek üzere olan ve tedarik gerektiren hammaddeler:</p>
+
+                            <div id="critical-stock-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                <!-- Populated dynamically -->
+                                <div class="text-center py-6 text-xs text-slate-500">Kritik seviyede malzeme bulunmamaktadır.</div>
+                            </div>
+                        </div>
+
+                        <button onclick="switchTab('purchases'); openPurchaseModal();" class="w-full mt-4 py-2.5 px-4 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 font-semibold text-xs flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-cart-plus"></i> Hızlı Satın Alma İrsaliyesi Oluştur
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Tables Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Son Siparişler & Backflushing -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-receipt text-amber-400"></i> Son Satışlar & Backflushing
+                            </h3>
+                            <button onclick="switchTab('pos')" class="text-xs text-orange-400 hover:underline">Tümünü Gör</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-700 text-slate-400 uppercase text-[10px]">
+                                        <th class="pb-2">Sipariş No</th>
+                                        <th class="pb-2">Kaynak</th>
+                                        <th class="pb-2">Tutar</th>
+                                        <th class="pb-2">Durum</th>
+                                        <th class="pb-2">Tarih</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-orders-tbody" class="divide-y divide-slate-700/50">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Son Zayiat & Fire Kayıtları -->
+                    <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-fire text-rose-400"></i> Son Zayiat / Fire Girişleri
+                            </h3>
+                            <button onclick="switchTab('waste')" class="text-xs text-rose-400 hover:underline">Tümünü Gör</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="border-b border-slate-700 text-slate-400 uppercase text-[10px]">
+                                        <th class="pb-2">Hammadde</th>
+                                        <th class="pb-2">Miktar</th>
+                                        <th class="pb-2">Zayiat Maliyeti</th>
+                                        <th class="pb-2">Neden</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-waste-tbody" class="divide-y divide-slate-700/50">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- TAB 2: INGREDIENTS (HAMMADDE & STOK KALEMLERİ) -->
+            <!-- =============================================================== -->
+            <section id="tab-ingredients" class="tab-pane hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">Hammadde & Depo Stok Yönetimi</h2>
+                        <p class="text-sm text-slate-400">Mevcut stok miktarları, birim maliyetler ve kritik eşik seviyeleri</p>
+                    </div>
+                    <button onclick="openIngredientModal()" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition self-start sm:self-auto">
+                        <i class="fa-solid fa-plus"></i> Yeni Hammadde Tanımla
+                    </button>
+                </div>
+
+                <!-- Filters & Search -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/80">
+                    <div class="relative w-full sm:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="ing-search" oninput="filterIngredientsTable()" placeholder="Hammadde ara..." class="w-full pl-9 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <select id="ing-status-filter" onchange="filterIngredientsTable()" class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-300 focus:outline-none">
+                            <option value="all">Tüm Durumlar</option>
+                            <option value="critical">Sadece Kritik Stoklar</option>
+                            <option value="normal">Normal Stoklar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Ingredients Table -->
+                <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-800/90 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                                <tr>
+                                    <th class="py-3 px-4">#</th>
+                                    <th class="py-3 px-4">Hammadde Adı</th>
+                                    <th class="py-3 px-4">Birim</th>
+                                    <th class="py-3 px-4">Son Alış Birim Fiyatı</th>
+                                    <th class="py-3 px-4">Mevcut Stok</th>
+                                    <th class="py-3 px-4">Min. Stok Eşiği</th>
+                                    <th class="py-3 px-4">Toplam Stok Değeri</th>
+                                    <th class="py-3 px-4">Stok Durumu</th>
+                                    <th class="py-3 px-4 text-right">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ingredients-tbody" class="divide-y divide-slate-700/60">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- TAB 3: MENU & RECIPES (MENÜ VE REÇETELER) -->
+            <!-- =============================================================== -->
+            <section id="tab-recipes" class="tab-pane hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">Menü Ürünleri & Reçete Maliyeti</h2>
+                        <p class="text-sm text-slate-400">Query A: Porsiyon başı reçete maliyeti, kar tutarı, kar marjı (%) ve fire payı</p>
+                    </div>
+                    <button onclick="openMenuItemModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition">
+                        <i class="fa-solid fa-plus"></i> Yeni Menü Ürünü Ekle
+                    </button>
+                </div>
+
+                <!-- Menu Cards Grid -->
+                <div id="menu-items-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- TAB 4: PURCHASES (SATIN ALMA VE İRSALİYE GİRİŞİ) -->
+            <!-- =============================================================== -->
+            <section id="tab-purchases" class="tab-pane hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">Satın Alma & Alış Faturaları</h2>
+                        <p class="text-sm text-slate-400">Alış faturası eklendiğinde hammadde stoğu ve son birim fiyat otomatik güncellenir (Trigger: trg_purchase_item_stock_in)</p>
+                    </div>
+                    <button onclick="openPurchaseModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-cyan-600/20 transition">
+                        <i class="fa-solid fa-plus-circle"></i> Yeni Fatura / İrsaliye Gir
+                    </button>
+                </div>
+
+                <!-- Purchases List -->
+                <div id="purchases-list" class="space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- TAB 5: POS / HIZLI SİPARİŞ & BACKFLUSHING -->
+            <!-- =============================================================== -->
+            <section id="tab-pos" class="tab-pane hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">POS Satış & Canlı Backflushing</h2>
+                        <p class="text-sm text-slate-400">Siparişi onayladığınız an mutfaktaki reçete malzemeleri fire payıyla birlikte stoktan düşer!</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Menu Items Selector -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <!-- Category tabs -->
+                        <div id="pos-categories" class="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                            <button onclick="filterPosCategory('all')" class="pos-cat-btn active px-3.5 py-1.5 rounded-xl bg-orange-600 text-white text-xs font-semibold whitespace-nowrap">Tümü</button>
+                            <!-- Dynamically added categories -->
+                        </div>
+
+                        <!-- Product Tiles -->
+                        <div id="pos-items-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Active Cart / Order Receipt -->
+                    <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 flex flex-col justify-between shadow-xl space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                                <div>
+                                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-receipt text-orange-400"></i> Aktif Adisyon
+                                    </h3>
+                                    <span id="pos-order-no" class="text-[11px] text-slate-400">Yeni Sipariş</span>
+                                </div>
+                                <button onclick="clearPosCart()" class="text-xs text-rose-400 hover:text-rose-300">Temizle</button>
+                            </div>
+
+                            <div class="mt-3 flex gap-2">
+                                <select id="pos-table-select" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-xl px-3 py-1.5 text-xs focus:outline-none">
+                                    <option value="Masa 1">Masa 1</option>
+                                    <option value="Masa 2">Masa 2</option>
+                                    <option value="Masa 3">Masa 3</option>
+                                    <option value="Paket Servis">Paket Servis</option>
+                                    <option value="Gel-Al (POS)">Gel-Al (POS)</option>
+                                </select>
+                            </div>
+
+                            <!-- Cart Items List -->
+                            <div id="pos-cart-items" class="mt-4 space-y-2 max-h-72 overflow-y-auto pr-1">
+                                <div class="text-center py-10 text-slate-500 text-xs">
+                                    <i class="fa-solid fa-basket-shopping text-2xl mb-2 text-slate-600 block"></i>
+                                    Sepetiniz boş. Soldaki menüden ürün seçin.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cart Summary & Checkout -->
+                        <div class="pt-4 border-t border-slate-700/80 space-y-3">
+                            <div class="flex justify-between text-xs text-slate-400">
+                                <span>Ara Toplam:</span>
+                                <span id="pos-subtotal">₺0,00</span>
+                            </div>
+                            <div class="flex justify-between text-sm font-bold text-white">
+                                <span>Genel Toplam:</span>
+                                <span id="pos-total" class="text-emerald-400 text-lg">₺0,00</span>
+                            </div>
+
+                            <button onclick="submitPosOrder()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-sm shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 transition active:scale-95">
+                                <i class="fa-solid fa-bolt"></i> Siparişi Tamamla & Stoktan Düş
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- TAB 6: WASTE & FIRE (ZAYİAT VE FİRE TAKİBİ) -->
+            <!-- =============================================================== -->
+            <section id="tab-waste" class="tab-pane hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">Zayiat & Fire Takibi</h2>
+                        <p class="text-sm text-slate-400">Bozulan, dökülen veya SKT'si geçen hammadde kayıtları (Trigger: trg_waste_stock_out)</p>
+                    </div>
+                    <button onclick="openWasteModal()" class="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-rose-600/20 transition">
+                        <i class="fa-solid fa-plus-circle"></i> Yeni Fire Kaydı Gir
+                    </button>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-800/90 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                                <tr>
+                                    <th class="py-3 px-4">#</th>
+                                    <th class="py-3 px-4">Hammadde</th>
+                                    <th class="py-3 px-4">Zayiat Miktarı</th>
+                                    <th class="py-3 px-4">Birim Alış Fiyatı</th>
+                                    <th class="py-3 px-4">Toplam Zarar (TL)</th>
+                                    <th class="py-3 px-4">Zayiat Nedeni</th>
+                                    <th class="py-3 px-4">Kayıt Tarihi</th>
+                                    <th class="py-3 px-4 text-right">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="waste-tbody" class="divide-y divide-slate-700/60">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =============================================================== -->
+            <!-- TAB 7: STOCK COUNTS & VARIANCE (FİZİKİ SAYIM & SAPMA) -->
+            <!-- =============================================================== -->
+            <section id="tab-stock-counts" class="tab-pane hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white tracking-tight">Fiziki Sayım & Sapma (Variance) Analizi</h2>
+                        <p class="text-sm text-slate-400">Query D: Teorik Stok vs Fiziki Sayım karşılaştırması ve mutfak dengeleme</p>
+                    </div>
+                    <button onclick="startNewStockCountSession()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-purple-600/20 transition">
+                        <i class="fa-solid fa-clipboard-list"></i> Yeni Fiziki Sayım Başlat
+                    </button>
+                </div>
+
+                <!-- Latest Count Variance Summary Banner -->
+                <div id="latest-variance-card" class="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-5 space-y-3 shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-scale-balanced"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white">Son Onaylı Fiziki Sayım Sapma Raporu</h3>
+                        </div>
+                        <span id="variance-date-badge" class="text-xs px-2.5 py-1 rounded bg-slate-700 text-slate-300">Tarih: -</span>
+                    </div>
+
+                    <div class="overflow-x-auto pt-2">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-slate-400 uppercase text-[10px] border-b border-slate-700">
+                                <tr>
+                                    <th class="pb-2">Hammadde</th>
+                                    <th class="pb-2">Birim</th>
+                                    <th class="pb-2">Teorik Stok</th>
+                                    <th class="pb-2">Fiziki Sayılan</th>
+                                    <th class="pb-2">Sapma (Teorik - Fiziki)</th>
+                                    <th class="pb-2">Birim Fiyat</th>
+                                    <th class="pb-2">Mali Fark (TL)</th>
+                                    <th class="pb-2">Sapma Oranı (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="variance-report-tbody" class="divide-y divide-slate-700/50">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Stock Counts Archive -->
+                <div class="space-y-3">
+                    <h3 class="text-base font-bold text-white">Tüm Sayım Geçmişi & Taslaklar</h3>
+                    <div id="stock-counts-list" class="space-y-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- MODALS -->
+    <!-- =================================================================== -->
+
+    <!-- 1. Ingredient Modal (Add / Edit) -->
+    <div id="modal-ingredient" class="modal-backdrop hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 id="modal-ingredient-title" class="text-base font-bold text-white">Yeni Hammadde Tanımla</h3>
+                <button onclick="closeModal('modal-ingredient')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-ingredient" onsubmit="handleSaveIngredient(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="ing-id">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Hammadde Adı *</label>
+                    <input type="text" id="ing-name" required placeholder="Örn: Dana Antrikot, Kaşar Peyniri" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Birim *</label>
+                        <select id="ing-unit" required class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="kg">kg (Kilogram)</option>
+                            <option value="gram">gram</option>
+                            <option value="adet">adet</option>
+                            <option value="litre">litre</option>
+                            <option value="ml">ml (Mililitre)</option>
+                            <option value="porsiyon">porsiyon</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Birim Alış Fiyatı (TL) *</label>
+                        <input type="number" step="0.01" id="ing-price" required placeholder="0.00" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Başlangıç Mevcut Stok</label>
+                        <input type="number" step="0.001" id="ing-stock" value="0" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Kritik Stok Eşiği (Min)</label>
+                        <input type="number" step="0.001" id="ing-min-stock" value="0" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-700 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-ingredient')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-xl">İptal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Recipe Detail & Editor Modal -->
+    <div id="modal-recipe" class="modal-backdrop hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700 shrink-0">
+                <div>
+                    <h3 id="recipe-modal-title" class="text-base font-bold text-white">Reçete Detayı & Maliyet Analizi</h3>
+                    <p id="recipe-modal-sub" class="text-xs text-slate-400">Ürünün içerdiği hammaddeler, porsiyon fire payı ve birim maliyeti</p>
+                </div>
+                <button onclick="closeModal('modal-recipe')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto space-y-4 pr-1">
+                <div class="flex items-center justify-between bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs">
+                    <div>
+                        <span class="text-slate-400">Satış Fiyatı:</span>
+                        <span id="recipe-selling-price" class="font-bold text-white ml-1">₺0,00</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Toplam Porsiyon Maliyeti:</span>
+                        <span id="recipe-total-cost" class="font-bold text-rose-400 ml-1">₺0,00</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Kar Marjı:</span>
+                        <span id="recipe-profit-margin" class="font-bold text-emerald-400 ml-1">%0.0</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-semibold text-slate-300">Reçetedeki Hammaddeler</label>
+                        <button type="button" onclick="addRecipeIngredientRow()" class="text-xs text-emerald-400 hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-plus-circle"></i> Malzeme Ekle
+                        </button>
+                    </div>
+
+                    <div id="recipe-rows-container" class="space-y-2">
+                        <!-- Dynamic ingredient rows -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-700 flex justify-between items-center shrink-0">
+                <span class="text-[11px] text-slate-400">* Formül: Miktar × (1 + Fire/100) × Birim Fiyat</span>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeModal('modal-recipe')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-xl text-xs">Kapat</button>
+                    <button type="button" onclick="saveRecipeDetails()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs">Reçeteyi Güncelle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Menu Item Modal (Add/Edit) -->
+    <div id="modal-menu-item" class="modal-backdrop hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 id="modal-menu-title" class="text-base font-bold text-white">Yeni Menü Ürünü</h3>
+                <button onclick="closeModal('modal-menu-item')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-menu-item" onsubmit="handleSaveMenuItem(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="menu-id">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Ürün Adı *</label>
+                    <input type="text" id="menu-name" required placeholder="Örn: Trüflü Burger, Tiramisu" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Satış Fiyatı (TL) *</label>
+                        <input type="number" step="0.01" id="menu-price" required placeholder="0.00" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Kategori *</label>
+                        <input type="text" id="menu-category" required placeholder="Örn: Burgerler, Makarnalar" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Görsel URL (Opsiyonel)</label>
+                    <input type="text" id="menu-image" placeholder="https://..." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="pt-3 border-t border-slate-700 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-menu-item')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-xl">İptal</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Purchase Invoice Modal (Add) -->
+    <div id="modal-purchase" class="modal-backdrop hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700 shrink-0">
+                <div>
+                    <h3 class="text-base font-bold text-white">Yeni Satın Alma / Alış Faturası Girişi</h3>
+                    <p class="text-xs text-slate-400">Malzeme stokları artırılacak ve son birim fiyat güncellenecektir.</p>
+                </div>
+                <button onclick="closeModal('modal-purchase')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="form-purchase" onsubmit="handleSavePurchase(event)" class="flex-1 overflow-y-auto space-y-4 text-xs pr-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Tedarikçi Firma *</label>
+                        <input type="text" id="pur-supplier" required placeholder="Örn: Et Tedarik A.Ş." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-semibold mb-1">Fatura / İrsaliye No *</label>
+                        <input type="text" id="pur-invoice" required placeholder="Örn: IRS-2026-002" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-semibold text-slate-300">Alınan Hammaddeler</label>
+                        <button type="button" onclick="addPurchaseRow()" class="text-xs text-cyan-400 hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-plus-circle"></i> Kalem Ekle
+                        </button>
+                    </div>
+
+                    <div id="purchase-rows-container" class="space-y-2">
+                        <!-- Dynamic purchase rows -->
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-700 flex justify-between items-center shrink-0">
+                    <div class="text-xs">
+                        <span class="text-slate-400">Fatura Toplamı:</span>
+                        <span id="purchase-total-calc" class="font-bold text-cyan-400 text-sm ml-1">₺0,00</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeModal('modal-purchase')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-xl text-xs">İptal</button>
+                        <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl text-xs">Faturayı Kaydet & Stoğa Al</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. Waste Modal (Add) -->
+    <div id="modal-waste" class="modal-backdrop hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="text-base font-bold text-white">Yeni Zayiat / Fire Girişi</h3>
+                <button onclick="closeModal('modal-waste')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-waste" onsubmit="handleSaveWaste(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Zayi Olan Malzeme *</label>
+                    <select id="waste-ing-select" required class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-rose-500">
+                        <!-- Dynamic ingredients -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Zayiat Miktarı *</label>
+                    <input type="number" step="0.001" id="waste-qty" required placeholder="0.000" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-rose-500">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-semibold mb-1">Zayiat / Fire Nedeni *</label>
+                    <select id="waste-reason" required class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-rose-500">
+                        <option value="Son kullanma tarihi geçti">Son kullanma tarihi geçti</option>
+                        <option value="Döküldü / Devrildi">Döküldü / Devrildi</option>
+                        <option value="Bozuldu / Ekşidi">Bozuldu / Ekşidi</option>
+                        <option value="Hazırlık sırasında yandı / hatalı pişti">Hazırlık sırasında yandı / hatalı pişti</option>
+                        <option value="Ambalaj hasarlı / delindi">Ambalaj hasarlı / delindi</option>
+                        <option value="Diğer Mutfak Firesi">Diğer Mutfak Firesi</option>
+                    </select>
+                </div>
+                <div class="pt-3 border-t border-slate-700 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modal-waste')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-xl">İptal</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl">Stoktan Düş</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. Physical Count Session Modal -->
+    <div id="modal-count-session" class="modal-backdrop hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700 shrink-0">
+                <div>
+                    <h3 class="text-base font-bold text-white">Fiziki Mutfak Sayımı & Stok Eşitleme</h3>
+                    <p class="text-xs text-slate-400">Sayımı tamamladığınızda sistem stokları sayılan miktara eşitlenir (Trigger: trg_stock_count_apply)</p>
+                </div>
+                <button onclick="closeModal('modal-count-session')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-1">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] sticky top-0">
+                        <tr>
+                            <th class="py-2.5 px-3">Hammadde</th>
+                            <th class="py-2.5 px-3">Birim</th>
+                            <th class="py-2.5 px-3">Sistem Stoğu (Teorik)</th>
+                            <th class="py-2.5 px-3 w-36">Fiziki Sayılan Miktar</th>
+                            <th class="py-2.5 px-3">Sapma (Fark)</th>
+                            <th class="py-2.5 px-3">Mali Etki (TL)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="count-session-tbody" class="divide-y divide-slate-700">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pt-3 border-t border-slate-700 flex justify-between items-center shrink-0">
+                <div class="text-xs">
+                    <span class="text-slate-400">Toplam Sapma Maliyeti:</span>
+                    <span id="session-total-variance-cost" class="font-bold text-amber-400 ml-1">₺0,00</span>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeModal('modal-count-session')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-xl text-xs">İptal</button>
+                    <button type="button" onclick="submitCompletedStockCount()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs">Sayımı Onayla & Stoğu Eşitle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

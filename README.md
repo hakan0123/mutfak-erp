@@ -30,8 +30,8 @@ Bu proje, profesyonel bir yazılım geliştirme sürecini simüle edecek şekild
 |---|---|---|
 | **Gün 1** | 🏛️ **Temel Mimari & Veritabanı Şeması**: Proje iskeleti, `.gitignore`, SQLite ilişkisel DDL şeması, sanal kolonlar (`STORED GENERATED`) ve başlangıç tohumlama mekanizması. | ✅ **Yayınlandı** |
 | **Gün 2** | ⚡ **Tetikleyiciler & Backflushing Motoru**: Otomatik stok giriş, reçeteli sipariş düşümü (`trg_order_item_backflush`), iptal iadesi, zayiat ve fiziki sayım senkronizasyon tetikleyicileri + birim testler (`tests/triggers.test.js`). | ✅ **Yayınlandı** |
-| **Gün 3 (Bugün)** | 🔌 **Backend REST API & Analitik Sorgular**: Express.js servisleri, Food Cost % hesabı (Query B), Menü Karlılığı (Query A), Kritik Stok Servisi (Query C) ve Sapma Analizi (Query D) + API testleri (`tests/api.test.js`). | ✅ **Yayınlandı** |
-| **Gün 4** | 🖥️ **Frontend & POS Arayüzü**: Dokunmatik POS ekranı, canlı adisyon sepeti, gerçek zamanlı stok kartları, reçete maliyet simülatörü ve Tailwind CSS teması. | ⏳ Planlandı |
+| **Gün 3** | 🔌 **Backend REST API & Analitik Sorgular**: Express.js servisleri, Food Cost % hesabı (Query B), Menü Karlılığı (Query A), Kritik Stok Servisi (Query C) ve Sapma Analizi (Query D) + API testleri (`tests/api.test.js`). | ✅ **Yayınlandı** |
+| **Gün 4 (Bugün)** | 🖥️ **Frontend & POS Arayüzü**: Dokunmatik POS ekranı, canlı adisyon sepeti, gerçek zamanlı stok kartları, reçete maliyet simülatörü ve Tailwind CSS teması (`public/`). | ✅ **Yayınlandı** |
 | **Gün 5** | 📊 **Fiziki Sayım Modülü, Raporlar & v1.0.0 Release**: Sayım eşitleme modalı, Menü Mühendisliği Matrisi (BCG), nihai testler ve sürüm yayını. | ⏳ Planlandı |
 
 ---
