@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "init-db": "node db.js",
-    "test": "node test_schema.js",
+    "test": "node test_schema.js && node tests/triggers.test.js && node tests/api.test.js && node tests/variance.test.js",
+    "test:schema": "node test_schema.js",
     "test:triggers": "node tests/triggers.test.js",
-    "test:api": "node tests/api.test.js"
+    "test:api": "node tests/api.test.js",
+    "test:variance": "node tests/variance.test.js"
   },
   "keywords": [
     "restaurant",
